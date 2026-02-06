@@ -4,12 +4,18 @@ from datetime import datetime, date
 import os
 import calendar
 
+# =====================
+# CONFIG
+# =====================
 st.set_page_config(page_title="KPI Planner", layout="wide")
 
-DATA_FILE = "data/data.csv"
+DATA_DIR = "data"          # folder SUDAH ADA
+DATA_FILE = os.path.join(DATA_DIR, "data.csv")
+
+PIC_LIST = ["Andi", "Windy", "Eta", "Intern"]
 
 # =====================
-# LOAD / INIT DATA
+# LOAD / SAVE DATA
 # =====================
 def load_data():
     if os.path.exists(DATA_FILE):
@@ -18,20 +24,15 @@ def load_data():
         df = pd.DataFrame(columns=[
             "KPI", "Activity", "Deadline", "PIC", "Status", "Last Updated"
         ])
-        df.to_csv(DATA_FILE, index=False)
 
-    # SAFE datetime parsing (FIX ERROR KAMU)
-    df["Deadline"] = pd.to_datetime(
-        df["Deadline"],
-        format="mixed",
-        errors="coerce"
-    ).dt.date
+    if not df.empty:
+        df["Deadline"] = pd.to_datetime(
+            df["Deadline"], format="mixed", errors="coerce"
+        ).dt.date
 
-    df["Last Updated"] = pd.to_datetime(
-        df["Last Updated"],
-        format="mixed",
-        errors="coerce"
-    )
+        df["Last Updated"] = pd.to_datetime(
+            df["Last Updated"], format="mixed", errors="coerce"
+        )
 
     return df
 
@@ -47,13 +48,14 @@ df = load_data()
 # =====================
 page = st.sidebar.radio("Menu", ["➕ Input Activity", "📅 Calendar View"])
 
-PIC_LIST = ["Andi", "Windy", "Eta", "Intern"]
-
 # =====================
 # PAGE 1 — INPUT
 # =====================
 if page == "➕ Input Activity":
     st.title("➕ Input KPI & Activity")
+
+    if not os.path.exists(DATA_FILE):
+        st.info("📁 Data belum ada. File akan dibuat saat save pertama.")
 
     with st.form("input_form"):
         kpi = st.text_input("KPI")
@@ -61,7 +63,7 @@ if page == "➕ Input Activity":
         deadline = st.date_input("Deadline", min_value=date.today())
         pic = st.selectbox("PIC", PIC_LIST)
 
-        submitted = st.form_submit_button("Save")
+        submitted = st.form_submit_button("💾 Save")
 
         if submitted:
             new_row = {
@@ -76,6 +78,7 @@ if page == "➕ Input Activity":
             df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
             save_data(df)
             st.success("Activity berhasil disimpan ✅")
+            st.rerun()
 
     st.divider()
     st.subheader("📋 Data Saat Ini")
@@ -94,15 +97,22 @@ elif page == "📅 Calendar View":
 
     cal = calendar.monthcalendar(year, month)
 
+    # =====================
+    # STYLE
+    # =====================
     st.markdown(
         """
         <style>
         .day-box {
             border: 1px solid #ddd;
-            border-radius: 10px;
-            padding: 8px;
-            height: 180px;
+            border-radius: 12px;
+            padding: 10px;
+            height: 200px;
             overflow-y: auto;
+        }
+        .today {
+            border: 2px solid #1f77ff;
+            background-color: #eef5ff;
         }
         .activity {
             background-color: #f4f6f8;
@@ -120,9 +130,9 @@ elif page == "📅 Calendar View":
     )
 
     days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-    cols = st.columns(7)
+    header = st.columns(7)
     for i, d in enumerate(days):
-        cols[i].markdown(f"**{d}**")
+        header[i].markdown(f"**{d}**")
 
     for week in cal:
         cols = st.columns(7)
@@ -132,7 +142,13 @@ elif page == "📅 Calendar View":
                     st.write("")
                 else:
                     current_date = date(year, month, day)
-                    st.markdown(f"<div class='day-box'><b>{day}</b>", unsafe_allow_html=True)
+                    is_today = current_date == today
+                    box_class = "day-box today" if is_today else "day-box"
+
+                    st.markdown(
+                        f"<div class='{box_class}'><b>{day}</b>",
+                        unsafe_allow_html=True
+                    )
 
                     day_tasks = df[df["Deadline"] == current_date]
 
@@ -151,7 +167,10 @@ elif page == "📅 Calendar View":
                         )
 
                         if not is_done:
-                            if st.button("Mark Done", key=f"done_{idx}"):
+                            if st.button(
+                                "Mark Done",
+                                key=f"done_{idx}_{current_date}"
+                            ):
                                 df.loc[idx, "Status"] = "Done"
                                 df.loc[idx, "Last Updated"] = datetime.now()
                                 save_data(df)
