@@ -6,7 +6,7 @@ import calendar
 
 st.set_page_config(page_title="KPI Planner", layout="wide")
 
-DATA_FILE = "data.csv"
+DATA_FILE = "data/data.csv"
 
 # =====================
 # LOAD / INIT DATA
