@@ -7,11 +7,12 @@ import calendar
 # =====================
 # CONFIG
 # =====================
-st.set_page_config(page_title="KPI Planner", layout="wide")
+st.set_page_config(page_title="Mini Trello KPI", layout="wide")
 
-DATA_DIR = "data"          # folder SUDAH ADA
+DATA_DIR = "data"
 DATA_FILE = os.path.join(DATA_DIR, "data.csv")
 
+KPI_LIST = ["Campaign", "Culture"]
 PIC_LIST = ["Andi", "Windy", "Eta", "Intern"]
 
 # =====================
@@ -55,15 +56,15 @@ if page == "➕ Input Activity":
     st.title("➕ Input KPI & Activity")
 
     if not os.path.exists(DATA_FILE):
-        st.info("📁 Data belum ada. File akan dibuat saat save pertama.")
+        st.info("📁 File data belum ada. Akan dibuat saat save pertama.")
 
-    with st.form("input_form"):
-        kpi = st.text_input("KPI")
+    with st.form("input_form", clear_on_submit=True):
+        kpi = st.selectbox("KPI", KPI_LIST)
         activity = st.text_input("Activity / Sub-KPI")
         deadline = st.date_input("Deadline", min_value=date.today())
         pic = st.selectbox("PIC", PIC_LIST)
 
-        submitted = st.form_submit_button("💾 Save")
+        submitted = st.form_submit_button("💾 Save Activity")
 
         if submitted:
             new_row = {
@@ -77,13 +78,13 @@ if page == "➕ Input Activity":
 
             df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
             save_data(df)
-            st.success("Activity berhasil disimpan ✅")
+
+            st.success("✅ Activity berhasil disimpan")
             st.rerun()
 
     st.divider()
-    st.subheader("📋 Data Saat Ini")
+    st.subheader("📋 Daftar Activity")
     st.dataframe(df, use_container_width=True)
-
 
 # =====================
 # PAGE 2 — CALENDAR
@@ -97,9 +98,6 @@ elif page == "📅 Calendar View":
 
     cal = calendar.monthcalendar(year, month)
 
-    # =====================
-    # STYLE
-    # =====================
     st.markdown(
         """
         <style>
@@ -107,7 +105,7 @@ elif page == "📅 Calendar View":
             border: 1px solid #ddd;
             border-radius: 12px;
             padding: 10px;
-            height: 200px;
+            height: 210px;
             overflow-y: auto;
         }
         .today {
@@ -160,7 +158,7 @@ elif page == "📅 Calendar View":
                             f"""
                             <div class="{css_class}">
                                 <b>{row['Activity']}</b><br>
-                                {row['PIC']} | {row['Status']}
+                                {row['KPI']} | {row['PIC']} | {row['Status']}
                             </div>
                             """,
                             unsafe_allow_html=True
